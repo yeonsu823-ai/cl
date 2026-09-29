@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>가짜 뉴스를 찾아라! - 복합양식 글 읽기</title>
+    <!-- Google Fonts & FontAwesome Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&family=Nanum+Myeongjo:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --secondary: #0891b2;
+            --accent: #f59e0b;
+            --bg-main: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+            --success: #059669;
+            --success-bg: #ecfdf5;
+            --danger: #dc2626;
+            --danger-bg: #fef2f2;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 16px;
+        }
+
+        .container {
+            max-width: 1380px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Header Styling */
+        header {
+            background: linear-gradient(135deg, #4f46e5 0%, #0284c7 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header-title h1 {
+            font-size: 1.8rem;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-title p {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        .badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Sticky Draggable Item Bank */
+        .item-bank-section {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--shadow-md);
+            border: 2px dashed #94a3b8;
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+            max-height: 40vh;
+            overflow-y: auto;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .draggable-pool {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 12px;
+            min-height: 80px;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Draggable Card Styling for Full Detailed Texts */
+        .drag-item {
+            background: white;
+            border: 2px solid #6366f1;
+            color: var(--text-main);
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            font-weight: 500;
+            cursor: grab;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            line-height: 1.5;
+            word-break: keep-all;
+        }
+
+        .drag-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--primary);
+            background: #eef2ff;
+        }
+
+        .drag-item:active, .drag-item.dragging {
+            opacity: 0.4;
+            cursor: grabbing;
+        }
+
+        .drag-item.selected-item {
+            outline: 3px solid var(--accent);
+            background-color: #fffbeb;
+        }
+
+        .drag-item.correct-placed {
+            border-color: var(--success);
+            background-color: var(--success-bg);
+            color: #065f46;
+        }
+
+        .drag-item.incorrect-placed {
+            border-color: var(--danger);
+            background-color: var(--danger-bg);
+            color: #991b1b;
+        }
+
+        .grip-icon {
+            color: #818cf8;
+            margin-top: 3px;
+            flex-shrink: 0;
+        }
+
+        /* Newspaper Articles Layout */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+            .draggable-pool {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .article-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .newspaper-style {
+            background-color: #faf8f5;
+            border: 1px solid #e2d9cc;
+            padding: 18px;
+            border-radius: 8px;
+            font-family: 'Nanum Myeongjo', serif;
+            position: relative;
+        }
+
+        .newspaper-tag {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--text-main);
+            color: white;
+            padding: 3px 10px;
+            font-size: 0.75rem;
+            font-family: 'Noto Sans KR', sans-serif;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+
+        .newspaper-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #1a1a1a;
+            padding-right: 60px;
+            line-height: 1.4;
+        }
+
+        .newspaper-meta {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 12px;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        .newspaper-body {
+            font-size: 0.92rem;
+            color: #2c2c2c;
+            line-height: 1.75;
+            text-align: justify;
+            word-break: keep-all;
+        }
+
+        /* Worksheet Drop Zone Table */
+        .worksheet-section {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .worksheet-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 15px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .worksheet-table th, .worksheet-table td {
+            padding: 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        .worksheet-table th {
+            background-color: #f1f5f9;
+            color: var(--text-main);
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .worksheet-table th:last-child, .worksheet-table td:last-child {
+            border-right: none;
+        }
+
+        .worksheet-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .eval-criterion {
+            width: 28%;
+            background-color: #f8fafc;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #334155;
+            word-break: keep-all;
+        }
+
+        /* Drop Zones */
+        .drop-zone {
+            min-height: 70px;
+            background: #fafafa;
+            border: 2px dashed #cbd5e1;
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .drop-zone.drag-over {
+            background: #e0e7ff;
+            border-color: var(--primary);
+            transform: scale(1.01);
+        }
+
+        .drop-zone-placeholder {
+            color: #94a3b8;
+            font-size: 0.82rem;
+            font-style: italic;
+            pointer-events: none;
+            margin: auto 0;
+            text-align: center;
+        }
+
+        /* Final Decision Section */
+        .final-decision-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 15px;
+            margin-top: 20px;
+            padding: 18px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        @media (max-width: 768px) {
+            .final-decision-container {
+                grid-template-columns: 1fr;
+            }
+            .worksheet-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+
+        /* Action Buttons */
+        .actions-bar {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            padding: 14px 32px;
+            border-radius: 30px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background-color: #cbd5e1;
+        }
+
+        /* Score & Feedback Card */
+        .result-card {
+            display: none;
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow-lg);
+            border: 2px solid var(--primary);
+            margin-top: 24px;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .score-display {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .feedback-text {
+            font-size: 0.95rem;
+            color: var(--text-main);
+            line-height: 1.7;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="header-title">
+            <h1><i class="fa-solid fa-magnifying-glass"></i> 활동지 1. 가짜 뉴스를 찾아라!</h1>
+            <p>중학교 2학년 국어 2단원 - (1) 복합양식 글 읽기</p>
+        </div>
+        <div class="badge">
+            <i class="fa-solid fa-hand-pointer"></i> 드래그 및 터치/클릭 배치 지원
+        </div>
+    </header>
+
+    <section class="item-bank-section">
+        <div class="section-header">
+            <div class="section-title">
+                <i class="fa-solid fa-boxes-stacked"></i> 평가 이유 카드 보관함 (아래 표의 적절한 위치로 배치하세요)
+            </div>
+            <button class="btn btn-secondary" style="padding: 6px 14px; font-size: 0.85rem;" onclick="resetDragItems()">
+                <i class="fa-solid fa-rotate-right"></i> 전체 위치 초기화
+            </button>
+        </div>
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 10px;">
+            <i class="fa-solid fa-circle-info"></i> 모바일/태블릿에서는 카드를 <strong>클릭(터치)한 후 원하는 칸을 클릭</strong>하여 배치할 수도 있습니다.
+        </p>
+        <div class="draggable-pool" id="itemBank">
+            <!-- Dynamic Drag Items loaded via JavaScript -->
+        </div>
+    </section>
+
+    <div class="main-layout">
+        <!-- Article A -->
+        <div class="article-card">
+            <div class="section-title" style="color: #2563eb;">
+                <i class="fa-solid fa-file-lines"></i> [자료 A] 실제 기사
+            </div>
+            <div class="newspaper-style">
+                <span class="newspaper-tag">자료 A</span>
+                <h2 class="newspaper-title">설탕 줄이기 정책 3년… 청소년 당류 섭취량 15% 감소</h2>
+                <div class="newspaper-meta">
+                    <i class="fa-regular fa-newspaper"></i> ◯◯일보 | 2025. 05. 20.
+                </div>
+                <p class="newspaper-body">
+                    질병관리청이 발표한 '2024년 국민건강영양조사' 결과에 따르면, 정부가 '청소년 당류 섭취 줄이기 정책'을 시행한 지 3년 만에 중·고등학생의 하루 평균 당류 섭취량이 전년 대비 약 15% 감소한 것으로 나타났다.<br><br>
+                    전문가들은 학교 매점 내 고단당 음료 판매 제한과 식생활 교육 강화가 실질적인 효과를 거둔 것으로 분석했다. 서울대학교 식품영양학과 연구팀은 "당류 섭취 감소는 청소년기 비만율과 비알코올성 지방간 발생 위험을 낮추는 데 크게 기여할 수 있다"라며 지속적인 관심과 교육이 필요하다고 조언했다.
+                </p>
+            </div>
+        </div>
+
+        <!-- Article B -->
+        <div class="article-card">
+            <div class="section-title" style="color: #dc2626;">
+                <i class="fa-solid fa-triangle-exclamation"></i> [자료 B] 각색한 기사 (가짜 뉴스)
+            </div>
+            <div class="newspaper-style" style="background-color: #fff8f8; border-color: #fca5a5;">
+                <span class="newspaper-tag" style="background: #dc2626;">자료 B</span>
+                <h2 class="newspaper-title" style="color: #991b1b; border-bottom-color: #dc2626;">충격! 설탕 완전히 끊었더니 암 세포 100% 사멸</h2>
+                <div class="newspaper-meta">
+                    <i class="fa-regular fa-newspaper"></i> △△내셔널이슈 | 2025. 06. 01.
+                </div>
+                <p class="newspaper-body">
+                    최근 한 민간연구소의 발표에 따르면, 일주일 동안 설탕을 전혀 먹지 않은 환자군에서 몸속 모든 암세포가 완전히 사라지는 기적 같은 현상이 관찰되었다.<br><br>
+                    이 연구 결과가 나오자마자 전 세계 유수의 병원에서는 기존 암 치료법을 모두 중단하고 '무설탕 단식 요법'만을 도입하기로 결정했다. 한 비공개 연구원은 "설탕은 인류 최고의 독약이며, 설탕만 먹지 않으면 그 어떤 병도 걸리지 않는다"라고 주장했다. 한편, 해당 민간연구소 사이트에서는 '암 예방용 특제 무설탕 대체당 가공식품'을 한정 수량으로 할인가에 판매하고 있다.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <section class="worksheet-section">
+        <div class="section-title">
+            <i class="fa-solid fa-pen-to-square"></i> 내용의 타당성·신뢰성 및 표현 방법 평가
+        </div>
+
+        <table class="worksheet-table">
+            <thead>
+                <tr>
+                    <th style="width: 28%;">항목 및 평가 기준</th>
+                    <th style="width: 36%;">자료 A 평가</th>
+                    <th style="width: 36%;">자료 B 평가</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 2. 타당성 - 중심 내용 -->
+                <tr>
+                    <td class="eval-criterion">
+                        <strong>2. 내용의 타당성 평가</strong><br>
+                        자료의 내용이 글의 중심 내용에서 벗어나지 않는가?
+                    </td>
+                    <td>
+                        <div class="drop-zone" data-target="A_validity_1">
+                            <span class="drop-zone-placeholder">자료 A 해당 카드를 놓으세요</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="drop-zone" data-target="B_validity_1">
+                            <span class="drop-zone-placeholder">자료 B 해당 카드를 놓으세요</span>
+                        </div>
+                    </td>
+                </tr>
+
+                <!-- 2. 타당성 - 이치 -->
+                <tr>
+                    <td class="eval-criterion">
+                        <strong>2. 내용의 타당성 평가</strong><br>
+                        자료의 내용이 이치에 맞는가?
+                    </td>
+                    <td>
+                        <div class="drop-zone" data-target="A_validity_2">
+                            <span class="drop-zone-placeholder">자료 A 해당 카드를 놓으세요</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="drop-zone" data-target="B_validity_2">
+                            <span class="drop-zone-placeholder">자료 B 해당 카드를 놓으세요</span>
+                        </div>
+                    </td>
+                </tr>
+
+                <!-- 2. 타당성 - 치우침 -->
+                <tr>
+                    <td class="eval-criterion">
+                        <strong>2. 내용의 타당성 평가</strong><br>
+                        작성자의 의도나 관점이 어느 한쪽으로 지나치게 치우치지 않았는가?
+                    </td>
+                    <td>
+                        <div class="drop-zone" data-target="A_validity_3">
+                            <span class="drop-zone-placeholder">자료 A 해당 카드를 놓으세요</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="drop-zone" data-target="B_validity_3">
+                            <span class="drop-zone-placeholder">자료 B 해당 카드를 놓으세요</span>
+                        </div>
+                    </td>
+                </tr>
+
+                <!-- 3. 신뢰성 -->
+                <tr>
+                    <td class="eval-criterion">
+                        <strong>3. 내용의 신뢰성 평가</strong><br>
+                        자료의 내용이 신뢰할 만한가?
+                    </td>
+                    <td>
+                        <div class="drop-zone" data-target="A_reliability">
+                            <span class="drop-zone-placeholder">자료 A 해당 카드를 놓으세요</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="drop-zone" data-target="B_reliability">
+                            <span class="drop-zone-placeholder">자료 B 해당 카드를 놓으세요</span>
+                        </div>
+                    </td>
+                </tr>
+
+                <!-- 4. 표현 방법 -->
+                <tr>
+                    <td class="eval-criterion">
+                        <strong>4. 표현 방법 평가</strong><br>
+                        자료에 쓰인 표현 방법이 적절한가?
+                    </td>
+                    <td>
+                        <div class="drop-zone" data-target="A_expression">
+                            <span class="drop-zone-placeholder">자료 A 해당 카드를 놓으세요</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="drop-zone" data-target="B_expression">
+                            <span class="drop-zone-placeholder">자료 B 해당 카드를 놓으세요</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="final-decision-container">
+            <div>
+                <strong style="color: var(--primary); font-size: 1.05rem;"><i class="fa-solid fa-gavel"></i> 5. 최종 판단: 가짜 뉴스는?</strong>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px;">가짜 뉴스 판정 카드를 배치하세요.</p>
+                <div style="margin-top: 10px;">
+                    <div class="drop-zone" data-target="FINAL_FAKE_NEWS">
+                        <span class="drop-zone-placeholder">[가짜 뉴스 판정 카드] 위치</span>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <strong style="color: var(--primary); font-size: 1.05rem;"><i class="fa-solid fa-comment-dots"></i> 최종 판단 이유</strong>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px;">가짜 뉴스로 판단한 근거와 이유 카드를 배치하세요.</p>
+                <div style="margin-top: 10px;">
+                    <div class="drop-zone" data-target="FINAL_REASON" style="min-height: 80px;">
+                        <span class="drop-zone-placeholder">[최종 이유 카드] 위치</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit & Feedback Buttons -->
+        <div class="actions-bar">
+            <button class="btn btn-primary" onclick="checkAnswers()">
+                <i class="fa-solid fa-circle-check"></i> 채점 및 피드백 확인하기
+            </button>
+        </div>
+
+        <div class="result-card" id="resultCard">
+            <div class="score-display" id="scoreDisplay"></div>
+            <div class="feedback-text" id="feedbackText"></div>
+        </div>
+    </section>
+</div>
+
+<script>
+    // Exact full detailed texts provided by user
+    const dragItemsData = [
+        {
+            id: 'card_a_val1',
+            text: '예. 청소년 당류 섭취량 감소라는 중심 주제에 맞춰 정부 조사 결과와 전문가 의견을 일관되게 제시함.',
+            target: 'A_validity_1'
+        },
+        {
+            id: 'card_b_val1',
+            text: '아니요. 설탕 섭취 중단의 효과를 설명하는 듯하다가 마지막에 특정 가공식품 판매 홍보로 내용이 흐려짐.',
+            target: 'B_validity_1'
+        },
+        {
+            id: 'card_a_val2',
+            text: '예. 통계 자료와 연구팀의 조언을 바탕으로 논리적으로 서술됨.',
+            target: 'A_validity_2'
+        },
+        {
+            id: 'card_b_val2',
+            text: '아니요. 일주일 설탕 단식으로 암세포가 100% 사멸한다거나, 전 세계 병원이 치료를 중단했다는 주장은 상식과 과학적 사실에 어긋남.',
+            target: 'B_validity_2'
+        },
+        {
+            id: 'card_a_val3',
+            text: '예. 객관적인 조사 수치와 학술적 분석에 기반하여 공정하게 작성됨.',
+            target: 'A_validity_3'
+        },
+        {
+            id: 'card_b_val3',
+            text: '아니요. "설탕은 인류 최고의 독약"이라는 편향된 주장을 하며, 자사 제품을 판매하려는 상업적 의도가 강함.',
+            target: 'B_validity_3'
+        },
+        {
+            id: 'card_a_rel',
+            text: '신뢰할 수 있음. \'질병관리청\', \'서울대학교 식품영양학과 연구팀\' 등 출처와 출처 제공자가 명확하고 공신력이 있음.',
+            target: 'A_reliability'
+        },
+        {
+            id: 'card_b_rel',
+            text: '신뢰할 수 없음. \'한 민간연구소\', \'한 비공개 연구원\' 등 정보의 출처가 불분명함.',
+            target: 'B_reliability'
+        },
+        {
+            id: 'card_a_exp',
+            text: '적절함. 객관적이고 중립적인 어조와 격식 있는 문체를 사용함.',
+            target: 'A_expression'
+        },
+        {
+            id: 'card_b_exp',
+            text: '적절하지 않음. \'충격!\', \'100% 사멸\', \'기적 같은 현상\' 등 자극적이고 과장된 어휘를 사용하여 독자의 감정을 선동함.',
+            target: 'B_expression'
+        },
+        {
+            id: 'card_final_fake',
+            text: '가짜 뉴스라고 판단한 자료: 자료 B',
+            target: 'FINAL_FAKE_NEWS'
+        },
+        {
+            id: 'card_final_reason',
+            text: '이유: 출처가 불분명하며(\'한 민간연구소\', \'비공개 연구원\'), 자극적이고 과장된 표현(\'충격!\', \'100% 사멸\')을 사용해 독자의 주의를 끄는 전형적인 가짜 뉴스 형태입니다. 또한 비과학적이고 타당하지 않은 주장을 바탕으로 특정 상품을 판매하려는 상업적 의도가 숨겨져 있으므로 신뢰할 수 없습니다.',
+            target: 'FINAL_REASON'
+        }
+    ];
+
+    let draggedItem = null;
+    let selectedItemForClick = null;
+
+    // Initialize Card Items into Bank
+    function initApp() {
+        const itemBank = document.getElementById('itemBank');
+        itemBank.innerHTML = '';
+
+        // Randomize order on load
+        const shuffled = [...dragItemsData].sort(() => Math.random() - 0.5);
+
+        shuffled.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'drag-item';
+            card.setAttribute('draggable', 'true');
+            card.setAttribute('id', item.id);
+            card.setAttribute('data-target', item.target);
+            card.innerHTML = `<i class="fa-solid fa-grip-vertical grip-icon"></i> <span>${item.text}</span>`;
+
+            // HTML5 Drag Events
+            card.addEventListener('dragstart', handleDragStart);
+            card.addEventListener('dragend', handleDragEnd);
+
+            // Click/Touch Alternative
+            card.addEventListener('click', handleCardClick);
+
+            itemBank.appendChild(card);
+        });
+
+        // Setup Drop Zones
+        const dropZones = document.querySelectorAll('.drop-zone');
+        dropZones.forEach(zone => {
+            zone.addEventListener('dragover', handleDragOver);
+            zone.addEventListener('dragenter', handleDragEnter);
+            zone.addEventListener('dragleave', handleDragLeave);
+            zone.addEventListener('drop', handleDrop);
+            
+            // Click to drop handler
+            zone.addEventListener('click', handleZoneClick);
+        });
+    }
+
+    // Drag Functions
+    function handleDragStart(e) {
+        draggedItem = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', this.id);
+    }
+
+    function handleDragEnd() {
+        this.classList.remove('dragging');
+        draggedItem = null;
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    }
+
+    function handleDragEnter(e) {
+        e.preventDefault();
+        this.classList.add('drag-over');
+    }
+
+    function handleDragLeave() {
+        this.classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+
+        if (!draggedItem) return;
+
+        moveItemToZone(draggedItem, this);
+    }
+
+    // Click / Touch Selection Support
+    function handleCardClick(e) {
+        e.stopPropagation();
+        
+        // Toggle selection
+        if (selectedItemForClick === this) {
+            this.classList.remove('selected-item');
+            selectedItemForClick = null;
+        } else {
+            if (selectedItemForClick) {
+                selectedItemForClick.classList.remove('selected-item');
+            }
+            selectedItemForClick = this;
+            this.classList.add('selected-item');
+        }
+    }
+
+    function handleZoneClick(e) {
+        if (selectedItemForClick) {
+            moveItemToZone(selectedItemForClick, this);
+            selectedItemForClick.classList.remove('selected-item');
+            selectedItemForClick = null;
+        }
+    }
+
+    function moveItemToZone(item, zone) {
+        zone.appendChild(item);
+        updatePlaceholders();
+    }
+
+    function updatePlaceholders() {
+        document.querySelectorAll('.drop-zone').forEach(zone => {
+            const placeholder = zone.querySelector('.drop-zone-placeholder');
+            const hasDragItems = zone.querySelectorAll('.drag-item').length > 0;
+            if (placeholder) {
+                placeholder.style.display = hasDragItems ? 'none' : 'block';
+            }
+        });
+    }
+
+    // Reset All Drag Items back to Bank
+    function resetDragItems() {
+        const itemBank = document.getElementById('itemBank');
+        const items = document.querySelectorAll('.drag-item');
+        
+        items.forEach(item => {
+            item.classList.remove('correct-placed', 'incorrect-placed', 'selected-item');
+            itemBank.appendChild(item);
+        });
+
+        selectedItemForClick = null;
+        updatePlaceholders();
+        document.getElementById('resultCard').style.display = 'none';
+    }
+
+    // Check Answers Logic
+    function checkAnswers() {
+        let score = 0;
+        const total = dragItemsData.length;
+
+        dragItemsData.forEach(data => {
+            const itemElem = document.getElementById(data.id);
+            const parentZone = itemElem ? itemElem.parentElement : null;
+
+            if (parentZone && parentZone.getAttribute('data-target') === data.target) {
+                score++;
+                itemElem.classList.add('correct-placed');
+                itemElem.classList.remove('incorrect-placed');
+            } else {
+                if (itemElem) {
+                    itemElem.classList.add('incorrect-placed');
+                    itemElem.classList.remove('correct-placed');
+                }
+            }
+        });
+
+        const resultCard = document.getElementById('resultCard');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const feedbackText = document.getElementById('feedbackText');
+
+        resultCard.style.display = 'block';
+
+        if (score === total) {
+            scoreDisplay.innerHTML = `<i class="fa-solid fa-circle-check" style="color: var(--success);"></i> 만점입니다! (${score} / ${total}개 정답)`;
+            feedbackText.innerHTML = `<strong>훌륭합니다!</strong> 모든 평가 이유 카드를 적절한 위치에 완벽하게 구분하여 배치하셨습니다.<br>
+            자료 A는 정부 조사 및 대학 연구팀의 공신력 있는 근거를 바탕으로 타당하게 작성된 반면, 자료 B는 불분명한 출처, 과장된 자극적 표현, 그리고 특정 대체당 가공식품을 판매하려는 상업적 목적이 결합된 <strong>가짜 뉴스</strong>임을 명확히 파악하였습니다.`;
+        } else {
+            scoreDisplay.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="color: var(--accent);"></i> ${total}개 중 ${score}개 정답!`;
+            feedbackText.innerHTML = `<strong>빨간색 테두리로 표시된 카드는 위치가 올바르지 않거나 아직 보관함에 남아있는 항목입니다.</strong><br>
+            각 신문 기사의 중심 내용 일치 여부, 출처의 명확성, 과장된 감정적 표현 사용 여부를 다시 비교하며 올바른 위치로 옮겨보세요.`;
+        }
+
+        resultCard.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Start on DOM Ready
+    window.addEventListener('DOMContentLoaded', () => {
+        initApp();
+        updatePlaceholders();
+    });
+</script>
+
+</body>
+</html>
